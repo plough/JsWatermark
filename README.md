@@ -35,3 +35,10 @@ PL.showWatermark($target);
 
 ## 大致的算法
 与 [JavaWatermark](https://github.com/plough/JavaWatermark) 的基本思路相同。
+
+## todo：更进一步
+### 性能优化
+已经提了一些 bug 过来了。同时开多个带水印的 tab 页，可能让浏览器崩溃。可以考虑把水印画到 canvas 里。
+### 防破解
+前端水印，怎样避免直接在浏览器中删除水印层 dom，从而去掉水印？
+看能否监听 dom 删除事件。如果检测到水印 dom 被删掉了，就立马重建。
