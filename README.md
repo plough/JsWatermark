@@ -34,4 +34,4 @@ PL.showWatermark($target);
 ![](https://raw.githubusercontent.com/plough/JsWatermark/master/img/watermarkDemo.png)
 
 ## 大致的算法
-与 JavaWatermark 的基本思路相同。
+与 [JavaWatermark](https://github.com/plough/JavaWatermark) 的基本思路相同。
