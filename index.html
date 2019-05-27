@@ -15,9 +15,9 @@
     </style>
   </head>
   <body>
-    <!-- <iframe src="http://baimoz.me"></iframe> -->
     <div class="container">
-      <iframe src="http://127.0.0.1:8080"></iframe>
+      <!-- <iframe src="http://127.0.0.1:8080"></iframe> -->
+      <iframe src="http://baimoz.me"></iframe>
     </div>
     <script charset="utf-8">
         var conf = {
@@ -30,9 +30,11 @@
         $(document).ready(function() {
             PL.loadWatermark(conf);
             PL.showWatermark($target, displayMode='canvas');
+            // PL.showWatermark($target);
         });
         $(window).resize(function() {
             PL.showWatermark($target, displayMode='canvas');
+            // PL.showWatermark($target);
         })
     </script>
   </body>

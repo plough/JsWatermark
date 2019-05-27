@@ -127,14 +127,14 @@
         }
     }
 
-    function _calcBlockSize(textLines, lineHeight, fontWidth) {
+    function _calcBlockSize(textLines, lineHeight, ctx) {
         var n = textLines.length;
         var blockHeight = n * lineHeight;
-        var blockLength = 0;
+        var blockWidth = 0;
         for (var i = 0; i < n; i++) {
-            blockLength = Math.max(textLines[i].length, blockLength);
+            blockWidth = Math.max(ctx.measureText(textLines[i]).width, blockWidth);
         }
-        return [blockLength * fontWidth, blockHeight];
+        return [blockWidth, blockHeight];
     }
 
     function _showWatermarkByCanvas($contentDiv, $absOutdiv, o) {
@@ -143,19 +143,7 @@
         var height = parseInt($contentDiv.css('height'));
         var ctx = _createCanvasAndGetContext($absOutdiv, width, height);
 
-        // 旋转画笔
-        ctx.rotate(-o.angle * Math.PI / 180);
-
-        // 设置颜色、字体等
-        ctx.fillStyle=o.color;
-        ctx.font=o.fontSize + " " + o.fontFamily;
-        o.textLines = o.text.split('<br>');
-        var fontSizeInPixel = ctx.measureText(PLACE_HOLDER).width;
-        o.fontWidth = fontSizeInPixel;
-        o.lineHeight = fontSizeInPixel;
-        o.xSpace = fontSizeInPixel;
-        o.ySpace = 2 * fontSizeInPixel;
-        [o.blockWidth, o.blockHeight] = _calcBlockSize(o.textLines, o.lineHeight, o.fontWidth);
+        prepareToDrawWatermark(ctx, o);
 
         // 具体的绘制算法
         var evenStartX = -(o.blockWidth + o.xSpace) / 2 + o.startX;  // 偶数行的起始位置
@@ -168,7 +156,18 @@
             }
         }
 
-
+        function prepareToDrawWatermark(ctx, o) {
+            ctx.rotate(-o.angle * Math.PI / 180);
+            ctx.fillStyle=o.color;
+            ctx.font=o.fontSize + " " + o.fontFamily;
+            o.textLines = o.text.split('<br>');
+            var fontSizeInPixel = ctx.measureText(PLACE_HOLDER).width;
+            o.fontWidth = fontSizeInPixel;
+            o.lineHeight = fontSizeInPixel;
+            o.xSpace = fontSizeInPixel;
+            o.ySpace = 2 * fontSizeInPixel;
+            [o.blockWidth, o.blockHeight] = _calcBlockSize(o.textLines, o.lineHeight, ctx);
+        }
     }
 
     function _showWatermarkByDiv($absOutdiv, o) {
@@ -185,12 +184,13 @@
         _rotateDiv($outdiv, -o.angle);
 
         _updateWatermarkTextWidthAndHeight($outdiv, o);
-        var oddStartX = o.startX - parseInt((o.width + o.xSpace) / 2);  // 偶数行的起始位置
+
+        var evenStartX = o.startX - parseInt((o.width + o.xSpace) / 2);  // 偶数行的起始位置
         var lineNum = 0;
         for (var y = o.startY; y < o.endY; y += (o.ySpace + o.height)) {
             // 水印交错排列
             lineNum ++;
-            var startX = lineNum % 2 === 0 ? oddStartX : o.startX;
+            var startX = lineNum % 2 === 0 ? evenStartX : o.startX;
 
             for (var x = startX; x < o.endX; x += o.width + o.xSpace) {
                 var $markDiv = $('<div/>').addClass('watermark-div').append(o.text);
