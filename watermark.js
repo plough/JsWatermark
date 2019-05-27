@@ -116,10 +116,33 @@
         return $canvas[0].getContext("2d");
     }
 
+    function _drawBlock(x, y, o, ctx) {
+        var midX = x + o.blockWidth / 2;
+        for (var i = 0; i < o.textLines.length; i++) {
+            var textLine = o.textLines[i];
+            var lineWidth = ctx.measureText(textLine).width;
+            var lineX = midX - lineWidth / 2;
+            ctx.fillText(textLine, lineX, y);
+            y += o.lineHeight;
+        }
+    }
+
+    function _calcBlockSize(textLines, lineHeight, fontWidth) {
+        var n = textLines.length;
+        var blockHeight = n * lineHeight;
+        var blockLength = 0;
+        for (var i = 0; i < n; i++) {
+            blockLength = Math.max(textLines[i].length, blockLength);
+        }
+        return [blockLength * fontWidth, blockHeight];
+    }
+
     function _showWatermarkByCanvas($contentDiv, $absOutdiv, o) {
+        // 创建 canvas
         var width = parseInt($contentDiv.css('width'));
         var height = parseInt($contentDiv.css('height'));
         var ctx = _createCanvasAndGetContext($absOutdiv, width, height);
+
         // 旋转画笔
         ctx.rotate(-o.angle * Math.PI / 180);
 
@@ -128,9 +151,11 @@
         ctx.font=o.fontSize + " " + o.fontFamily;
         o.textLines = o.text.split('<br>');
         var fontSizeInPixel = ctx.measureText(PLACE_HOLDER).width;
+        o.fontWidth = fontSizeInPixel;
+        o.lineHeight = fontSizeInPixel;
         o.xSpace = fontSizeInPixel;
         o.ySpace = 2 * fontSizeInPixel;
-        [o.blockWidth, o.blockHeight] = _calcBlockSize(o.textLines, fontSizeInPixel);
+        [o.blockWidth, o.blockHeight] = _calcBlockSize(o.textLines, o.lineHeight, o.fontWidth);
 
         // 具体的绘制算法
         var evenStartX = -(o.blockWidth + o.xSpace) / 2 + o.startX;  // 偶数行的起始位置
@@ -139,29 +164,11 @@
             lineNum ++;
             var startX = lineNum % 2 == 0 ? evenStartX : o.startX;
             for (var x = startX; x < o.endX; x += (o.xSpace + o.blockWidth)) {
-                // 绘制一个水印块
-                var midX = x + o.blockWidth / 2;
-                var tmpY = y;
-                for (var i = 0; i < o.textLines.length; i++) {
-                    var textLine = o.textLines[i];
-                    var lineWidth = ctx.measureText(textLine).width;
-                    var lineX = midX - lineWidth / 2;
-                    ctx.fillText(textLine, lineX, tmpY);
-                    tmpY += fontSizeInPixel;
-                }
-
+                _drawBlock(x, y, o, ctx);
             }
         }
 
-        function _calcBlockSize(textLines, fontSizeInPixel) {
-            var n = textLines.length;
-            var blockHeight = n * fontSizeInPixel;
-            var blockLength = 0;
-            for (var i = 0; i < n; i++) {
-                blockLength = Math.max(textLines[i].length, blockLength);
-            }
-            return [blockLength * fontSizeInPixel, blockHeight];
-        }
+
     }
 
     function _showWatermarkByDiv($absOutdiv, o) {
@@ -170,7 +177,6 @@
         $absOutdiv.append($outdiv);
 
         $outdiv.css({
-            'opacity': o.alpha,
             'font-size': o.fontSize,
             'font-family': o.fontFamily,
             'color': o.color
@@ -244,7 +250,8 @@
             'width': $contentDiv.css('width'),
             'height': $contentDiv.css('height'),
             'margin': $contentDiv.css('margin'),
-            'padding': $contentDiv.css('padding')
+            'padding': $contentDiv.css('padding'),
+            'opacity': o.alpha
         });
         $parent.append($absOutdiv);
 
