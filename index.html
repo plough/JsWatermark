@@ -29,12 +29,12 @@
 
         $(document).ready(function() {
             PL.loadWatermark(conf);
-            PL.showWatermark($target, displayMode='canvas');
-            // PL.showWatermark($target);
+            // PL.showWatermark($target, displayMode='div');
+            PL.showWatermark($target);
         });
         $(window).resize(function() {
-            PL.showWatermark($target, displayMode='canvas');
-            // PL.showWatermark($target);
+            // PL.showWatermark($target, displayMode='div');
+            PL.showWatermark($target);
         })
     </script>
   </body>

@@ -150,7 +150,7 @@
         var lineNum = 0;
         for (var y = o.startY; y < o.endY; y += (o.ySpace + o.blockHeight)) {
             lineNum ++;
-            var startX = lineNum % 2 == 0 ? evenStartX : o.startX;
+            var startX = lineNum % 2 === 0 ? evenStartX : o.startX;
             for (var x = startX; x < o.endX; x += (o.xSpace + o.blockWidth)) {
                 _drawBlock(x, y, o, ctx);
             }
@@ -310,15 +310,20 @@
         /**
          * 显示水印
          * 低版本浏览器(~IE10)保证视觉效果，不保证操作；IE8及以下，视觉效果略有偏差
-         * $contentDiv: 水印要覆盖的 div
+         * $contentDiv：水印要覆盖的 div；
+         * displayMode：指定显示方式，div 还是 canvas
+         *
+         * 举例：
+         * 1. FR.showWatermark($target)  // 使用 canvas
+         * 2. FR.showWatermark($target, displayMode='div')  // 使用 div
          * */
         showWatermark: function ($contentDiv, displayMode) {
             if (_isEmpty($contentDiv) || _isEmpty(currentWatermarkConfig.text)) {
                 return;
             }
-            var useCanvas = false;
-            if (displayMode === 'canvas' && _supportCanvas()) {
-                useCanvas = true;
+            var useCanvas = true;
+            if (displayMode === 'div' || !_supportCanvas()) {
+                useCanvas = false;
             }
             _showWatermark($.extend(currentWatermarkConfig, {
                 $contentDiv: $contentDiv
