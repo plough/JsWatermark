@@ -15,21 +15,24 @@
     </style>
   </head>
   <body>
-    <iframe src="http://baimoz.me"></iframe>
+    <!-- <iframe src="http://baimoz.me"></iframe> -->
+    <div class="container">
+      <iframe src="http://127.0.0.1:8080"></iframe>
+    </div>
     <script charset="utf-8">
         var conf = {
            text: '水印测试<br>123456',
-           color: 'red',
+           color: 'blue',
            fontSize: '20'
         }
         var $target = $('iframe');
 
         $(document).ready(function() {
             PL.loadWatermark(conf);
-            PL.showWatermark($target);
+            PL.showWatermark($target, displayMode='canvas');
         });
         $(window).resize(function() {
-            PL.showWatermark($target);
+            PL.showWatermark($target, displayMode='canvas');
         })
     </script>
   </body>

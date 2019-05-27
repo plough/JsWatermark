@@ -4,6 +4,7 @@
  */
 
 (function ($) {
+    var PLACE_HOLDER = "，";  // 一个全角字符（不能用全角空格，Edge 会忽略空白字符的尺寸）
 
     var currentWatermarkConfig = {};
     var _lowVersionIE = undefined;  // 做一个缓存
@@ -33,6 +34,12 @@
             _lowVersionIE = false;
         }
         return _lowVersionIE;
+    }
+
+    function _supportCanvas() {
+        var elem = document.createElement('canvas');
+        // 使用!!的原因：确保返回 bool 值，而不是 undefined
+        return !!(elem.getContext && elem.getContext('2d'));
     }
 
     function _parseInt(value) {
@@ -96,57 +103,71 @@
         }
     }
 
-    function _showWatermark(config) {
-        var o = $.extend({
-            text: '',
-            color: 'black',  // 水印字体颜色
-            fontSize: '20pt',  // 水印字体大小
-            alpha: 0.1,  // 水印透明度
-            angle: 20,  // 水印倾斜度数（绝对值）
-            adjustRatio: 0.1  // 增加水印层高度，用来校正误差
-        }, config);
+    function _createCanvasAndGetContext($absOutdiv, width, height) {
+        // 创建 canvas
+        var $canvas = $('<canvas/>', {
+                          'class' : 'watermark-canvas'
+                      }).prop({
+                          width: width,
+                          height: height
+                      });
+        $absOutdiv.append($canvas);
 
-        var $contentDiv = config.$contentDiv;
-        if ($contentDiv.length === 0) {
-            return;
+        return $canvas[0].getContext("2d");
+    }
+
+    function _showWatermarkByCanvas($contentDiv, $absOutdiv, o) {
+        var width = parseInt($contentDiv.css('width'));
+        var height = parseInt($contentDiv.css('height'));
+        var ctx = _createCanvasAndGetContext($absOutdiv, width, height);
+        // 旋转画笔
+        ctx.rotate(-o.angle * Math.PI / 180);
+
+        // 设置颜色、字体等
+        ctx.fillStyle=o.color;
+        ctx.font=o.fontSize + " " + o.fontFamily;
+        o.textLines = o.text.split('<br>');
+        var fontSizeInPixel = ctx.measureText(PLACE_HOLDER).width;
+        o.xSpace = fontSizeInPixel;
+        o.ySpace = 2 * fontSizeInPixel;
+        [o.blockWidth, o.blockHeight] = _calcBlockSize(o.textLines, fontSizeInPixel);
+
+        // 具体的绘制算法
+        var evenStartX = -(o.blockWidth + o.xSpace) / 2 + o.startX;  // 偶数行的起始位置
+        var lineNum = 0;
+        for (var y = o.startY; y < o.endY; y += (o.ySpace + o.blockHeight)) {
+            lineNum ++;
+            var startX = lineNum % 2 == 0 ? evenStartX : o.startX;
+            for (var x = startX; x < o.endX; x += (o.xSpace + o.blockWidth)) {
+                // 绘制一个水印块
+                var midX = x + o.blockWidth / 2;
+                var tmpY = y;
+                for (var i = 0; i < o.textLines.length; i++) {
+                    var textLine = o.textLines[i];
+                    var lineWidth = ctx.measureText(textLine).width;
+                    var lineX = midX - lineWidth / 2;
+                    ctx.fillText(textLine, lineX, tmpY);
+                    tmpY += fontSizeInPixel;
+                }
+
+            }
         }
 
-        var sinAngle = Math.sin(o.angle / 180 * Math.PI);
-        var cosAngle = Math.cos(o.angle / 180 * Math.PI);
-
-        var contentDivTop = _parseInt($contentDiv.css('top'));
-        var contentDivLeft = _parseInt($contentDiv.css('left'));
-
-        var $parent = $contentDiv.parent();
-
-        // 初始化一些配置
-        var w = $contentDiv.width();
-        var h = $contentDiv.height();
-        o.startX = -h * sinAngle * cosAngle;
-        o.startY = -h * sinAngle * sinAngle;
-        o.endX = o.startX + w * cosAngle + h * sinAngle;
-        o.endY = o.startY + w * sinAngle + h * cosAngle;
-        o.endY += h * o.adjustRatio; // 由于存在计算误差，给水印层高度多加一点
-        if (isWindows()) {
-            o.fontFamily = '"Microsoft YaHei", SimHei, Airal, Verdana, SimSun';
-        } else {
-            o.fontFamily = '"PingFang SC", "Hiragino Sans GB", Airal, Verdana';
+        function _calcBlockSize(textLines, fontSizeInPixel) {
+            var n = textLines.length;
+            var blockHeight = n * fontSizeInPixel;
+            var blockLength = 0;
+            for (var i = 0; i < n; i++) {
+                blockLength = Math.max(textLines[i].length, blockLength);
+            }
+            return [blockLength * fontSizeInPixel, blockHeight];
         }
+    }
 
-        $('.watermark-abs-outdiv', $parent).remove();  // 防止重复加载
-        // 创建水印外壳div
-        var $absOutdiv = $('<div/>').addClass('watermark-abs-outdiv');  // 最外层绝对布局div
-        $absOutdiv.css({
-            'top': contentDivTop,
-            'left': contentDivLeft,
-            'width': $contentDiv.css('width'),
-            'height': $contentDiv.css('height'),
-            'margin': $contentDiv.css('margin'),
-            'padding': $contentDiv.css('padding')
-        });
+    function _showWatermarkByDiv($absOutdiv, o) {
+
         var $outdiv = $('<div/>').addClass('watermark-outdiv');
         $absOutdiv.append($outdiv);
-        $parent.append($absOutdiv);
 
         $outdiv.css({
             'opacity': o.alpha,
@@ -177,9 +198,66 @@
         }
     }
 
+    function _showWatermark(config, useCanvas) {
+        var o = $.extend({
+            text: '',
+            color: 'black',  // 水印字体颜色
+            fontSize: '20pt',  // 水印字体大小
+            alpha: 0.1,  // 水印透明度
+            angle: 20,  // 水印倾斜度数（绝对值）
+            adjustRatio: 0.1  // 增加水印层高度，用来校正误差
+        }, config);
+
+        var $contentDiv = config.$contentDiv;
+        if ($contentDiv.length === 0) {
+            return;
+        }
+
+        var sinAngle = Math.sin(o.angle / 180 * Math.PI);
+        var cosAngle = Math.cos(o.angle / 180 * Math.PI);
+
+        var contentDivTop = _parseInt($contentDiv.offset().top);
+        var contentDivLeft = _parseInt($contentDiv.offset().left);
+
+        var $parent = $contentDiv.parent();
+
+        // 初始化一些配置
+        var w = $contentDiv.width();
+        var h = $contentDiv.height();
+        o.startX = -h * sinAngle * cosAngle;
+        o.startY = -h * sinAngle * sinAngle;
+        o.endX = o.startX + w * cosAngle + h * sinAngle;
+        o.endY = o.startY + w * sinAngle + h * cosAngle;
+        o.endY += h * o.adjustRatio; // 由于存在计算误差，给水印层高度多加一点
+        if (isWindows()) {
+            o.fontFamily = '"Microsoft YaHei", SimHei, Airal, Verdana, SimSun';
+        } else {
+            o.fontFamily = '"PingFang SC", "Hiragino Sans GB", Airal, Verdana';
+        }
+
+        $('.watermark-abs-outdiv', $parent).remove();  // 防止重复加载
+        // 创建水印外壳div
+        var $absOutdiv = $('<div/>').addClass('watermark-abs-outdiv');  // 最外层绝对布局div
+        $absOutdiv.css({
+            'top': contentDivTop,
+            'left': contentDivLeft,
+            'width': $contentDiv.css('width'),
+            'height': $contentDiv.css('height'),
+            'margin': $contentDiv.css('margin'),
+            'padding': $contentDiv.css('padding')
+        });
+        $parent.append($absOutdiv);
+
+        if (useCanvas) {
+            _showWatermarkByCanvas($contentDiv, $absOutdiv, o);
+        } else {
+            _showWatermarkByDiv($absOutdiv, o);
+        }
+    }
+
     function _updateWatermarkTextWidthAndHeight($outdiv, o) {
         // 因为字体大小的单位是 pt，需要从这里算出一个字的像素大小
-        var fontSizeInPixel = _getWatermarkDivSizeOnScreen($outdiv, "，").width; // 一个全角字符（不能用全角空格，Edge 会忽略空白字符的尺寸）
+        var fontSizeInPixel = _getWatermarkDivSizeOnScreen($outdiv, PLACE_HOLDER).width;
         o.xSpace = fontSizeInPixel;
         o.ySpace = 2 * fontSizeInPixel;
 
@@ -227,14 +305,17 @@
          * 低版本浏览器(~IE10)保证视觉效果，不保证操作；IE8及以下，视觉效果略有偏差
          * $contentDiv: 水印要覆盖的 div
          * */
-        showWatermark: function ($contentDiv) {
+        showWatermark: function ($contentDiv, displayMode) {
             if (_isEmpty($contentDiv) || _isEmpty(currentWatermarkConfig.text)) {
                 return;
             }
+            var useCanvas = false;
+            if (displayMode === 'canvas' && _supportCanvas()) {
+                useCanvas = true;
+            }
             _showWatermark($.extend(currentWatermarkConfig, {
                 $contentDiv: $contentDiv
-            }));
+            }), useCanvas);
         }
     });
 })(jQuery);
-
