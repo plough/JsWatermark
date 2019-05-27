@@ -166,7 +166,9 @@
             o.lineHeight = fontSizeInPixel;
             o.xSpace = fontSizeInPixel;
             o.ySpace = 2 * fontSizeInPixel;
-            [o.blockWidth, o.blockHeight] = _calcBlockSize(o.textLines, o.lineHeight, ctx);
+            var blockSize = _calcBlockSize(o.textLines, o.lineHeight, ctx);
+            o.blockWidth = blockSize[0];
+            o.blockHeight = blockSize[1];
         }
     }
 
