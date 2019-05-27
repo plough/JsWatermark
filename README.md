@@ -31,7 +31,7 @@ PL.showWatermark($target);
 
 ## 效果演示
 浏览器打开 index.html。
-![](https://raw.githubusercontent.com/plough/JsWatermark/master/img/watermarkDemo.png)
+![](https://github.com/plough/JsWatermark/blob/master/img/watermarkDemo.png?raw=true)
 
 ## 大致的算法
 与 [JavaWatermark](https://github.com/plough/JavaWatermark) 的基本思路相同。
